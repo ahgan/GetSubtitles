@@ -177,7 +177,7 @@ class GetSubtitles(object):
         if not self.query:
             chosen_sub = list(sub_dict.keys())[0]
             link = sub_dict[chosen_sub]['link']
-            return chosen_sub, link
+            return chosen_sub, link, sub_dict[chosen_sub]['ref']
 
         for i, key in enumerate(sub_dict.keys()):
             if i == self.sub_num:
@@ -208,7 +208,7 @@ class GetSubtitles(object):
                 choice = None
         chosen_sub = list(sub_dict.keys())[choice - 1]
         link = sub_dict[chosen_sub]['link']
-        return chosen_sub, link
+        return chosen_sub, link, sub_dict[chosen_sub]['ref']
 
     def guess_subtitle(self, sublist, video_info):
 
@@ -357,6 +357,8 @@ class GetSubtitles(object):
                                 single_subtitle)['encoding']
                             if 'ISO' in encoding:
                                 encoding = 'gbk'
+                            elif 'Windows-1252' in encoding:
+                                encoding = 'gbk'
                             output = prefix + info.decode(encoding).\
                                 encode(GetSubtitles.output_encode)
                             print(output)
@@ -395,8 +397,12 @@ class GetSubtitles(object):
                 sub_new_name = v_name_without_format \
                                + os.path.splitext(sub_name.encode('utf8'))[1]
             except UnicodeDecodeError:
-                sub_new_name = v_name_without_format \
-                               + os.path.splitext(sub_name.decode('utf8'))[1]
+                try:
+                    sub_new_name = v_name_without_format \
+                                   + os.path.splitext(sub_name.decode('utf8'))[1]
+                except UnicodeDecodeError:
+                    sub_new_name = v_name_without_format \
+                                   + os.path.splitext(sub_name)[1]
         else:
             sub_new_name = v_name_without_format \
                            + os.path.splitext(sub_name)[1]
@@ -457,7 +463,7 @@ class GetSubtitles(object):
                 extract_sub_name = None
                 # 遍历字幕包直到有猜测字幕
                 while not extract_sub_name and len(sub_dict) > 0:
-                    sub_choice, link = self.choose_subtitle(sub_dict)
+                    sub_choice, link, ref = self.choose_subtitle(sub_dict)
                     sub_dict.pop(sub_choice)
                     if py == 2:
                         encoding = chardet.detect(sub_choice)['encoding']
@@ -491,7 +497,7 @@ class GetSubtitles(object):
                             return
                     elif '[ZIMUKU]' in sub_choice:
                         datatype, sub_data_bytes = self.zimuku.download_file(
-                            sub_choice, link
+                            sub_choice, link, ref
                         )
 
                     if datatype in self.support_file_list:
@@ -521,10 +527,16 @@ class GetSubtitles(object):
                                         encoding = encoding['encoding']
                                         if 'ISO' in encoding:
                                             encoding = 'gbk'
+                                        elif 'Windows-1252' in encoding:
+                                            encoding = 'gbk'
+                                            
                                         extract_sub_name = extract_sub_name.\
                                             decode(encoding)
-                                        extract_sub_name = extract_sub_name.\
-                                            encode(GetSubtitles.output_encode)
+                                        try:
+                                            extract_sub_name = extract_sub_name.\
+                                                encode(GetSubtitles.output_encode)
+                                        except UnicodeEncodeError:
+                                            extract_sub_name = extract_sub_name
                                     else:
                                         extract_sub_name = extract_sub_name.\
                                             encode(GetSubtitles.output_encode)

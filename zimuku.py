@@ -6,6 +6,7 @@ from contextlib import closing
 from collections import OrderedDict as order_dict
 
 import requests
+import urllib
 from bs4 import BeautifulSoup
 from guessit import guessit
 
@@ -21,14 +22,12 @@ class ZimukuDownloader(object):
 
     def __init__(self):
         self.headers = {
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_5)\
-                            AppleWebKit 537.36 (KHTML, like Gecko) Chrome",
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_5) AppleWebKit 537.36 (KHTML, like Gecko) Chrome",
             "Accept-Language": "zh-CN,zh;q=0.8",
-            "Accept": "text/html,application/xhtml+xml,\
-                        application/xml;q=0.9,image/webp,*/*;q=0.8"
+            "Accept": "*/*;q=0.8"
         }
-        self.site_url = 'http://www.zimuku.cn'
-        self.search_url = 'http://www.zimuku.cn/search?q='
+        self.site_url = 'https://www.zimuku.cn'
+        self.search_url = 'https://www.zimuku.cn/search?q='
 
     def get_subtitles(self, keywords, sub_num=10):
 
@@ -49,7 +48,7 @@ class ZimukuDownloader(object):
 
         while True:
             # 当前关键字搜索
-            r = s.get(self.search_url + keyword, timeout=10)
+            r = s.get(self.search_url + urllib.quote(keyword), timeout=10)
             if py == 2:
                 html = r.text.encode('utf8')
             else:
@@ -148,14 +147,16 @@ class ZimukuDownloader(object):
                     elif 'jollyroger' in lang.attrs['src']:
                         type_score += 8
                 sub_info['lan'] = type_score
-                download_link = 'http:' \
-                    + bs_obj.find('a', {'id': 'down1'}).attrs['href']
+                download_link = bs_obj.find('a', {'id': 'down1'}).attrs['href']
+                if not download_link.startswith("http:"):
+                    download_link = 'http:' + download_link
                 r = s.get(download_link, timeout=60)
                 bs_obj = BeautifulSoup(r.text, 'html.parser')
-                download_link = bs_obj.find('a', {'rel': 'nofollow'})
-                download_link = 'http://www.subku.net' + \
-                    download_link.attrs['href']
-                sub_info['link'] = download_link
+                download_link = bs_obj.find('a', {'rel': 'nofollow'}).attrs['href']
+                if not download_link.startswith('http://www.subku.net'):
+                    download_link = 'http://www.subku.net' + download_link
+                sub_info['ref'] = sub_info['link']
+                sub_info['link'] = download_link                
             else:
                 # 射手字幕页面
                 r = s.get(sub_info['link'], timeout=60)
@@ -180,20 +181,31 @@ class ZimukuDownloader(object):
 
         return sub_dict
 
-    def download_file(self, file_name, download_link):
+    def download_file(self, file_name, download_link, ref):
 
         try:
-            with closing(requests.get(download_link, stream=True)) as response:
-                filename = response.headers['Content-Disposition']
+            self.headers['referer'] = ref
+            with closing(requests.get(download_link, stream=True, headers=self.headers)) as response:
+                try:
+                    filename = response.headers['Content-Disposition']
+                except KeyError:
+                    filename = 'unknown.rar'
+                    
                 chunk_size = 1024  # 单次请求最大值
                 # 内容体总大小
-                content_size = int(response.headers['content-length'])
-                bar = ProgressBar(prefix + ' Get',
-                                  file_name.strip(), content_size)
-                sub_data_bytes = b''
-                for data in response.iter_content(chunk_size=chunk_size):
-                    sub_data_bytes += data
-                    bar.refresh(len(sub_data_bytes))
+                try:
+                    content_size = int(response.headers['content-length'])
+                    bar = ProgressBar(prefix + ' Get',
+                                      file_name.strip(), content_size)
+                    sub_data_bytes = b''
+                    for data in response.iter_content(chunk_size=chunk_size):
+                        sub_data_bytes += data
+                        bar.refresh(len(sub_data_bytes))
+                except KeyError:
+                    sub_data_bytes = b''
+                    for data in response.iter_content(chunk_size=chunk_size):
+                        sub_data_bytes += data
+                    
         except requests.Timeout:
             return None, None, 'false'
         if '.rar' in filename:
