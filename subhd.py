@@ -85,7 +85,8 @@ class SubHDDownloader(object):
                         type_score += ('简体' in text) * 4
                         type_score += ('双语' in text) * 8
                         sub_dict[sub_name] = {'lan': type_score,
-                                              'link': sub_url}
+                                              'link': sub_url, 
+                                              'ref': self.search_url + keyword}
                     if len(sub_dict) >= sub_num:
                         del keywords[:]  # 字幕条数达到上限，清空keywords
                         break
