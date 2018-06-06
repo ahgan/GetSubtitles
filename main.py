@@ -16,11 +16,11 @@ from guessit import guessit
 from requests import exceptions
 
 from sys_global_var import py, prefix
-from __init__ import __version__
 from subhd import SubHDDownloader
 from zimuzu import ZimuzuDownloader
 from zimuku import ZimukuDownloader
 
+from pkg_resources import get_distribution
 
 class GetSubtitles(object):
 
@@ -592,7 +592,7 @@ class GetSubtitles(object):
 
 
 def main():
-
+    __version__ = get_distribution('getsub').version
     arg_parser = argparse.ArgumentParser(
         prog='GetSubtitles',
         epilog='getsub %s \n\n@guoyuhang' % __version__,

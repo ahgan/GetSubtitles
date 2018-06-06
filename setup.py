@@ -1,6 +1,5 @@
 # coding: utf8
-from setuptools import setup
-from __init__ import __version__
+from setuptools import setup, find_packages
 
 setup(
     author="gyh1621",
@@ -8,8 +7,9 @@ setup(
     description="download subtitles easily",
     license="MIT",
     name='getsub',
-    version=__version__,
-    packages=[''],
+    packages = find_packages(),
+    version='1.6.3',
+    py_modules=['getsub'],
     install_requires=[    # 依赖列表
         'requests>=2.0',
         'bs4>=0.0.1',
