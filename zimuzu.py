@@ -3,6 +3,7 @@
 from __future__ import print_function
 from collections import OrderedDict as order_dict
 from contextlib import closing
+from urllib import parse
 
 import requests
 from bs4 import BeautifulSoup
@@ -24,10 +25,8 @@ class ZimuzuDownloader(object):
             "Accept": "text/html,application/xhtml+xml,\
                         application/xml;q=0.9,image/webp,*/*;q=0.8"
         }
-        self.site_url = 'http://www.zimuzu.tv'
-        self.search_url = 'http://www.zimuzu.tv/search?\
-                            keyword={0}&type=subtitle'
-
+        self.site_url = 'http://www.zimuzu.io'
+        self.search_url = 'http://www.zimuzu.io/search/index?keyword={0}&type=subtitle'
     def get_subtitles(self, keywords, sub_num=5):
 
         print(prefix + ' Searching ZIMUZU...', end='\r')
@@ -41,7 +40,7 @@ class ZimuzuDownloader(object):
         s = requests.session()
         while True:
             # 当前关键字查询
-            r = s.get(self.search_url.format(keyword), headers=self.headers, timeout=10)
+            r = s.get(self.search_url.format(parse.quote(keyword)), headers=self.headers, timeout=10)
             bs_obj = BeautifulSoup(r.text, 'html.parser')
             tab_text = bs_obj.find('div', {'class': 'article-tab'}).text
             tab_text = tab_text.encode('utf8') if py == 2 else tab_text
@@ -52,6 +51,7 @@ class ZimuzuDownloader(object):
                     sub_name = sub_name.encode('utf8') if py == 2 else sub_name
                     a = one_box.find('a')
                     text = a.text.encode('utf8') if py == 2 else a.text
+                    # print(self.site_url, a.attrs['href'])
                     sub_url = self.site_url + a.attrs['href']
                     type_score = 0
                     type_score += ('英文' in text) * 1
